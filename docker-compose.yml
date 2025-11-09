@@ -1,0 +1,89 @@
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: flowbit-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: flowbit_analytics
+      POSTGRES_INITDB_ARGS: "-E UTF8"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U flowbit -d flowbit_analytics"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - flowbit-network
+
+  # Uncomment to run Vanna AI in Docker
+  # vanna:
+  #   build:
+  #     context: ./services/vanna
+  #     dockerfile: Dockerfile
+  #   container_name: flowbit-vanna
+  #   restart: unless-stopped
+  #   environment:
+  #     DATABASE_URL: postgresql+psycopg://flowbit:flowbit_secure_pass@postgres:5432/flowbit_analytics
+  #     GROQ_API_KEY: ${GROQ_API_KEY}
+  #     PORT: 8000
+  #   ports:
+  #     - "8000:8000"
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #   networks:
+  #     - flowbit-network
+
+  # Uncomment to run backend in Docker
+  # backend:
+  #   build:
+  #     context: ./apps/api
+  #     dockerfile: Dockerfile
+  #   container_name: flowbit-backend
+  #   restart: unless-stopped
+  #   environment:
+  #     DATABASE_URL: postgresql://flowbit:flowbit_secure_pass@postgres:5432/flowbit_analytics
+  #     VANNA_API_BASE_URL: http://vanna:8000
+  #     PORT: 3001
+  #     NODE_ENV: production
+  #     FRONTEND_URL: http://localhost:3000
+  #   ports:
+  #     - "3001:3001"
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #   networks:
+  #     - flowbit-network
+
+  # Uncomment to run frontend in Docker
+  # frontend:
+  #   build:
+  #     context: ./apps/web
+  #     dockerfile: Dockerfile
+  #   container_name: flowbit-frontend
+  #   restart: unless-stopped
+  #   environment:
+  #     NEXT_PUBLIC_API_BASE: http://localhost:3001/api
+  #     NEXT_PUBLIC_APP_URL: http://localhost:3000
+  #   ports:
+  #     - "3000:3000"
+  #   depends_on:
+  #     - backend
+  #   networks:
+  #     - flowbit-network
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  flowbit-network:
+    driver: bridge

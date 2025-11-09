@@ -1,0 +1,10 @@
+{
+  "name": "flowbit-analytics",
+  "private": true,
+  "workspaces": ["apps/*", "services/*", "packages/*"],
+  "scripts": {
+    "dev": "npm run dev --workspaces --if-present",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down"
+  }
+}

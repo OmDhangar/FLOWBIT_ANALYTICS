@@ -1,0 +1,92 @@
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Node
+node_modules/
+**/node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-lock.yaml
+package-lock.json
+
+# Next.js
+.next/
+out/
+.vercel/
+
+# Build outputs
+dist/
+build/
+coverage/
+coverage-final.json
+.nyc_output/
+*.tsbuildinfo
+
+# Prisma / generated clients and caches
+node_modules/.prisma/
+**/.prisma/
+# Prisma client is generated into node_modules; node_modules is already ignored
+
+# TypeScript
+*.tsbuildinfo
+
+# Environment files
+.env
+.env.*
+!.env.example
+apps/api/.env
+services/vanna/.env
+apps/web/.env.local
+
+# Docker
+docker-compose.override.yml
+docker-compose.override.yml*
+.docker/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+*.pytest_cache/
+.venv/
+venv/
+env/
+ENV/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Uvicorn/ASGI
+*.log
+
+# Editor directories and files
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# OS files
+Thumbs.db
+.DS_Store
+ehthumbs.db
+Icon?
+
+# JetBrains
+.idea/
+*.iml
+
+# Misc
+.cache/
+.parcel-cache/
+.eslintcache
+.sass-cache/
+/.vercel/
+.serverless/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+lerna-debug.log*
