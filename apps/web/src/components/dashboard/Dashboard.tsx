@@ -124,15 +124,15 @@ export default function Dashboard() {
                 <StatCard
                   title="Total Spend (YTD)"
                   value={formatCurrency(stats.totalSpend)}
-                  change={stats.totalSpendChange || 8.2}
-                  changeLabel={getChangeLabel(stats.totalSpendChange || 8.2)}
+                  change={stats.totalSpendChange || 7.6}
+                  changeLabel={getChangeLabel(stats.totalSpendChange || 7.6)}
                   trend="up"
                 />
                 <StatCard
                   title="Total Invoices Processed"
                   value={stats.totalInvoices.toString()}
-                  change={stats.totalInvoicesChange || 8.2}
-                  changeLabel={getChangeLabel(stats.totalInvoicesChange || 8.2)}
+                  change={stats.totalInvoicesChange || 7.6}
+                  changeLabel={getChangeLabel(stats.totalInvoicesChange || 5.4)}
                   trend="up"
                   highlighted
                 />
