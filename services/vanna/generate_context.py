@@ -1,4 +1,4 @@
-# generate_context.py
+
 import os
 import pandas as pd
 from pathlib import Path

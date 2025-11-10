@@ -77,9 +77,9 @@ CONTEXT_DIR = Path("context")
 SAMPLES_DIR = Path("samples")
 SCHEMA_DOC = Path("DATABASE_SCHEMA.md")
 
-# ------------------------------------------------------------------
+
 # Column name normalizer (camelCase → exact match)
-# ------------------------------------------------------------------
+
 COLUMN_MAP = {
     # totalAmount
     "total_amount": "totalAmount",
@@ -129,9 +129,9 @@ def normalize_sql_columns(sql: str) -> str:
         sql = re.sub(rf'\b{re.escape(wrong)}\b', correct, sql, flags=re.IGNORECASE)
     return sql
 
-# ------------------------------------------------------------------
+
 # 1. Initialize clients
-# ------------------------------------------------------------------
+
 def init_clients():
     global groq_client, db_engine
     if groq_client is None or db_engine is None:
@@ -149,9 +149,9 @@ def init_clients():
 
     return groq_client, db_engine
 
-# ------------------------------------------------------------------
+
 # 2. Parse DATABASE_SCHEMA.md
-# ------------------------------------------------------------------
+
 def parse_schema() -> dict:
     if not SCHEMA_DOC.exists():
         raise FileNotFoundError("DATABASE_SCHEMA.md not found")
@@ -212,9 +212,9 @@ def parse_schema() -> dict:
 
     return data
 
-# ------------------------------------------------------------------
+
 # 3. Load context (cached)
-# ------------------------------------------------------------------
+
 def load_schema_context() -> str:
     global _schema_cache, _schema_ts
     now = time.time()
@@ -245,9 +245,9 @@ def load_schema_context() -> str:
     _schema_ts = now
     return ctx
 
-# ------------------------------------------------------------------
+
 # 4. Prompt
-# ------------------------------------------------------------------
+
 SYSTEM_PROMPT = """You are a PostgreSQL expert. Generate ONE valid SELECT query.
 - Use only tables/columns from the context.
 - End with semicolon.
@@ -260,12 +260,9 @@ def build_prompt(question: str):
         {"role": "user", "content": f"Context:\n{ctx}\n\nQuestion: {question}\nSQL:"}
     ]
 
-# ------------------------------------------------------------------
-# Clean + Quote column names to preserve camelCase
-# ------------------------------------------------------------------
-# ------------------------------------------------------------------
+
 # Clean + Quote ONLY identifiers (columns, tables, aliases) — NOT keywords
-# ------------------------------------------------------------------
+
 def clean_sql_response(raw: str) -> str:
     m = re.search(r"```(?:sql)?\s*(.*?)\s*```", raw, re.S | re.I)
     sql = (m.group(1) if m else raw).strip()
@@ -309,9 +306,9 @@ def clean_sql_response(raw: str) -> str:
 
     return sql
 
-# ------------------------------------------------------------------
+
 # 6. Windows-safe timeout using threading
-# ------------------------------------------------------------------
+
 class TimeoutException(Exception):
     pass
 
@@ -339,9 +336,9 @@ def _run_with_timeout(func, args=(), kwargs=None, timeout=15):
     return result[0]
 
 
-# ------------------------------------------------------------------
+
 # 6. Execute with timeout + limit (SAFE: removes duplicate LIMIT)
-# ------------------------------------------------------------------
+
 def execute_sql(sql: str):
     def _query():
         sql_clean = re.sub(r'\bLIMIT\s+\d+\s*(;|$)', '', sql, flags=re.I).strip()
@@ -354,9 +351,9 @@ def execute_sql(sql: str):
     return _run_with_timeout(_query, timeout=15)
 
 
-# ------------------------------------------------------------------
+
 # 7. Self-healing loop
-# ------------------------------------------------------------------
+
 def run_with_healing(question: str):
     last_sql = last_err = None
     for attempt in range(3):
@@ -388,9 +385,9 @@ def run_with_healing(question: str):
             logger.warning(f"Attempt {attempt+1} failed: {e}")
     raise HTTPException(500, "AI failed after 3 attempts")
 
-# ------------------------------------------------------------------
+
 # 8. Endpoints
-# ------------------------------------------------------------------
+
 @app.on_event("startup")
 async def startup():
     init_clients()
@@ -423,9 +420,9 @@ async def query_data(req: QueryRequest):
         logger.error(f"Query failed: {e}")
         raise HTTPException(500, detail=str(e))
 
-# ------------------------------------------------------------------
+
 # 9. Run
-# ------------------------------------------------------------------
+
 if __name__ == "__main__":
     import uvicorn
     port = int(os.getenv("PORT", 8000))

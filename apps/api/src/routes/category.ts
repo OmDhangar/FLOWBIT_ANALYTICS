@@ -1,5 +1,3 @@
-// apps/api/src/routes/category.ts
-
 import express from 'express';
 import type { Request, Response } from 'express';
 import { prisma } from '../index.js';
@@ -11,7 +9,6 @@ router.get('/', async (req: Request, res: Response) => {
   try {
     const { startDate, endDate } = req.query;
 
-    // Build where clause
     const where: any = {
       category: {
         not: null,

@@ -1,5 +1,3 @@
-// apps/api/src/routes/vendors.ts
-
 import express from 'express';
 import type { Request, Response } from 'express';
 import { prisma } from '../index.js';

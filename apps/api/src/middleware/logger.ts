@@ -1,5 +1,3 @@
-// apps/api/src/middleware/logger.ts
-
 import type { Request, Response, NextFunction } from 'express';
 
 // Simple logger utility

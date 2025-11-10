@@ -17,7 +17,6 @@ const SACHKONTO_TO_DEPARTMENT_MAP: Record<string, string> = {
 };
 
 
-// 2. MAIN SEEDING FUNCTION (No changes needed)
 
 async function main() {
   console.log('🌱 Starting database seed...');
@@ -39,7 +38,6 @@ async function main() {
   ]);
   console.log('✅ All tables cleared.');
 
-  // Read and parse
   const rawData = fs.readFileSync(dataPath, 'utf-8');
   const data = JSON.parse(rawData);
 
@@ -75,7 +73,7 @@ async function main() {
 }
 
 
-// 3. NORMALIZER FUNCTION (Modified to use the map)
+// 3. NORMALIZER FUNCTION 
 
 function normalizeAnalyticsData(llm: any) {
   const inv = llm.invoice?.value || {};
@@ -103,7 +101,6 @@ function normalizeAnalyticsData(llm: any) {
     total: toNumber(summary.invoiceTotal?.value),
     lineItems: Array.isArray(lineItems)
       ? lineItems.map((li: any) => {
-          // --- START OF MAPPING LOGIC ---
           const sachkontoId = li.Sachkonto?.value?.toString();
           const description = li.description?.value || 'Item';
           let categoryName: string | null = null;
@@ -118,14 +115,13 @@ function normalizeAnalyticsData(llm: any) {
             else if (description.includes('Transaction Fee')) categoryName = 'Transaction Fees';
             else categoryName = 'Uncategorized';
           }
-          // --- END OF MAPPING LOGIC ---
 
           return {
             description: description,
             quantity: toNumber(li.quantity?.value, 1),
             unitPrice: toNumber(li.unitPrice?.value),
             amount: toNumber(li.totalPrice?.value),
-            category: categoryName, // <-- Use the new mapped name
+            category: categoryName, 
           };
         })
       : [],
@@ -136,11 +132,11 @@ function normalizeAnalyticsData(llm: any) {
 // 4. PROCESSOR FUNCTION (Modified to set dynamic status)
 
 async function processInvoiceData(item: any) {
-  // Vendor
+
   let vendor = await prisma.vendor.findFirst({ where: { name: item.vendor.name } });
   if (!vendor) vendor = await prisma.vendor.create({ data: item.vendor });
 
-  // Customer
+
   let customer = null;
   if (item.customer?.name) {
     customer = await prisma.customer.findFirst({ where: { name: item.customer.name } });
@@ -149,17 +145,17 @@ async function processInvoiceData(item: any) {
 
   // Determine realistic invoice status
   const today = new Date();
-  today.setHours(0, 0, 0, 0); // Set to start of day for comparison
+  today.setHours(0, 0, 0, 0);
   let invoiceStatus: InvoiceStatus;
   const total = toNumber(item.total);
   const dueDate = item.dueDate ? new Date(item.dueDate) : null;
 
   if (total <= 0) {
-    invoiceStatus = InvoiceStatus.PAID; // Mark credit notes as PAID
+    invoiceStatus = InvoiceStatus.PAID; 
   } else if (dueDate && dueDate < today) {
-    invoiceStatus = InvoiceStatus.OVERDUE; // Due date is in the past
+    invoiceStatus = InvoiceStatus.OVERDUE; 
   } else {
-    invoiceStatus = InvoiceStatus.PENDING; // Due date is in the future or null
+    invoiceStatus = InvoiceStatus.PENDING; 
   }
 
   // Invoice
@@ -183,7 +179,6 @@ async function processInvoiceData(item: any) {
   // Line Items
   for (const li of item.lineItems) {
     const amount = toNumber(li.amount);
-    // Skip line items with 0 or negative (credit) amounts
     if (amount <= 0) continue; 
 
     await prisma.lineItem.create({
@@ -193,17 +188,16 @@ async function processInvoiceData(item: any) {
         quantity: toNumber(li.quantity, 1),
         unitPrice: toNumber(li.unitPrice),
         amount: amount,
-        category: li.category, // This now holds the Department Name
+        category: li.category, 
       },
     });
   }
 
-  // We are NOT creating Payment records, so invoices remain unpaid.
   console.log(`✅ Inserted invoice ${item.invoiceNumber} (Status: ${invoiceStatus})`);
 }
 
 
-// 5. HELPER FUNCTIONS (No changes needed)
+// 5. HELPER FUNCTIONS
 
 function mapPaymentMethod(method: string | undefined): PaymentMethod {
   if (!method) return PaymentMethod.BANK_TRANSFER;
@@ -224,7 +218,7 @@ function toNumber(val: any, fallback = 0): number {
 }
 
 
-// 6. RUNNER (No changes needed)
+// 6. RUNNER 
 
 main()
   .catch((e) => {

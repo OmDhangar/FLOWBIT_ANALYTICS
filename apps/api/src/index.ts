@@ -1,11 +1,7 @@
-// apps/api/src/index.ts
-
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
-
-// Import middleware
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import { requestLogger, logger } from './middleware/logger.js';
 
@@ -19,7 +15,6 @@ import cashOutflowRouter from './routes/cashOutflow.js';
 import categoryOutflowRouter from './routes/categoryOutflow.js';
 import chatRouter from './routes/chat.js';
 
-// Load environment variables
 dotenv.config();
 
 // Initialize Prisma
@@ -46,7 +41,6 @@ app.use(requestLogger);
 // Health check endpoint
 app.get('/health', async (req, res) => {
   try {
-    // Check database connection
     await prisma.$queryRaw`SELECT 1`;
     res.json({
       status: 'healthy',
@@ -74,7 +68,7 @@ app.use('/api/cash-outflow', cashOutflowRouter);
 app.use('/api/category-outflow', categoryOutflowRouter);
 app.use('/api/chat-with-data', chatRouter);
 
-// Welcome route
+
 app.get('/', (req, res) => {
   res.json({
     message: 'Flowbit Analytics API',
@@ -96,10 +90,9 @@ app.get('/', (req, res) => {
 // 404 handler
 app.use(notFoundHandler);
 
-// Error handler (must be last)
+// Error handler 
 app.use(errorHandler);
 
-// Graceful shutdown
 process.on('SIGTERM', async () => {
   logger.info('SIGTERM signal received: closing HTTP server');
   await prisma.$disconnect();

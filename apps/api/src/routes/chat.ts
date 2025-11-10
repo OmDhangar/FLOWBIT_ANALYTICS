@@ -1,5 +1,3 @@
-// apps/api/src/routes/chat.ts
-
 import express from 'express';
 import type { Request, Response } from 'express';
 import axios from 'axios';
@@ -22,7 +20,7 @@ router.post('/', async (req: Request, res: Response) => {
       `${VANNA_API_BASE_URL}/api/query`,
       { question },
       {
-        timeout: 30000, // 30 second timeout
+        timeout: 30000, 
         headers: {
           'Content-Type': 'application/json',
         },

@@ -1,5 +1,3 @@
-// apps/api/src/routes/stats.ts
-
 import express from 'express';
 import type { Request, Response } from 'express';
 import { prisma } from '../index.js';
@@ -36,7 +34,6 @@ router.get('/', async (req: Request, res: Response) => {
       },
     });
 
-    // Documents uploaded (assuming all invoices are documents)
     const documentsUploaded = await prisma.invoice.count({
       where: {
         documentUrl: {

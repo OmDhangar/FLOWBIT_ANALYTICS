@@ -1,5 +1,3 @@
-// apps/api/src/routes/invoices.ts
-
 import express from 'express';
 import type { Request, Response } from 'express';
 import { prisma } from '../index.js';
@@ -25,7 +23,6 @@ router.get('/', async (req: Request, res: Response) => {
     const limitNum = parseInt(limit as string);
     const skip = (pageNum - 1) * limitNum;
 
-    // Build where clause
     const where: any = {};
 
     if (search) {

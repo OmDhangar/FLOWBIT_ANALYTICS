@@ -1,5 +1,3 @@
-// apps/api/src/routes/categoryOutflow.ts
-
 import express from 'express';
 import type { Request, Response } from 'express';
 import { prisma } from '../index.js';
@@ -24,8 +22,6 @@ router.get('/', async (req: Request, res: Response) => {
           in: ['PENDING', 'SENT', 'PARTIALLY_PAID', 'OVERDUE'],
         },
         dueDate: {  
-          // REMOVED: gte: today,
-          // This ensures we find ALL overdue and future-due invoices
           lte: endDate,
         },
       },

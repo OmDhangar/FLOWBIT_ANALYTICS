@@ -12,7 +12,7 @@ router.get('/', async (req: Request, res: Response) => {
     const { months = '6' } = req.query;
     const monthsNum = parseInt(months as string);
 
-    // --- START OF FIX ---
+
 
     // 1. Set 'today' to the start of the day for accurate date comparisons
     const today = new Date();
@@ -57,7 +57,6 @@ router.get('/', async (req: Request, res: Response) => {
     const monthlyOutflow = new Map<string, number>();
 
     invoices.forEach((invoice: any) => {
-      // We already filtered for null dueDates in the query
 
       // Calculate remaining amount
       const paidAmount = invoice.payments.reduce(
@@ -89,11 +88,8 @@ router.get('/', async (req: Request, res: Response) => {
       monthlyOutflow.set(monthKey, existing + remainingAmount);
     });
 
-    // --- END OF FIX ---
 
-    // Convert to array and fill missing months
     const result = [];
-    // Start filling buckets from the current date
     const currentDate = new Date(today); 
 
     for (let i = 0; i < monthsNum; i++) {
@@ -101,8 +97,6 @@ router.get('/', async (req: Request, res: Response) => {
         currentDate.getMonth() + 1
       ).padStart(2, '0')}`;
 
-      // Get the sum we calculated. This will include all overdue items
-      // in the first month (i=0).
       const amount = monthlyOutflow.get(monthKey) || 0;
 
       result.push({
