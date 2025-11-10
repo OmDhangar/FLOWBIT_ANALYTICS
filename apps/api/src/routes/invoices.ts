@@ -112,8 +112,13 @@ router.get('/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
+    if (!id) {
+      return res.status(400).json({ error: 'Invoice ID is required' });
+    }
+
+    // Now, TypeScript knows 'id' is a string, not undefined
     const invoice = await prisma.invoice.findUnique({
-      where: { id },
+      where: { id }, // This is now safe
       include: {
         vendor: true,
         customer: true,
