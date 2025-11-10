@@ -4,6 +4,21 @@ import * as path from 'path';
 
 const prisma = new PrismaClient();
 
+
+const SACHKONTO_TO_DEPARTMENT_MAP: Record<string, string> = {
+  '4400': 'Marketing',        
+  '4425': 'HR', 
+  '3450': 'Operations',     
+  '3400': 'Sales (Goods)',    
+  '4910': 'Vehicle Fleet',     
+  '4920': 'Travel/Lodging',   
+  '4200': 'Logistics/Shipping', 
+  '4925': 'IT & Software',    
+};
+
+
+// 2. MAIN SEEDING FUNCTION (No changes needed)
+
 async function main() {
   console.log('🌱 Starting database seed...');
 
@@ -48,10 +63,10 @@ async function main() {
         const unique = `${normalized.invoiceNumber}-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
         console.warn(`⚠️ Duplicate invoiceNumber '${normalized.invoiceNumber}' → retrying as '${unique}'`);
         normalized.invoiceNumber = unique;
-        await processInvoiceData(normalized);
+        await processInvoiceData(normalized); // Retry with unique number
         inserted++;
       } else {
-        console.error('❌ Failed to process invoice:', err.message);
+        console.error(`❌ Failed to process invoice ${normalized.invoiceNumber}:`, err.message);
       }
     }
   }
@@ -59,7 +74,9 @@ async function main() {
   console.log(`🎯 Seeding finished. Total inserted invoices: ${inserted}`);
 }
 
-// 🔄 Normalize JSON into seed-friendly object
+
+// 3. NORMALIZER FUNCTION (Modified to use the map)
+
 function normalizeAnalyticsData(llm: any) {
   const inv = llm.invoice?.value || {};
   const vendor = llm.vendor?.value || {};
@@ -71,7 +88,7 @@ function normalizeAnalyticsData(llm: any) {
   return {
     invoiceNumber: inv.invoiceId?.value?.toString() || `INV-${Date.now()}`,
     issueDate: inv.invoiceDate?.value || new Date(),
-    dueDate: payment.dueDate?.value || null,
+    dueDate: payment.dueDate?.value || inv.deliveryDate?.value || null,
     vendor: {
       name: vendor.vendorName?.value || 'Unknown Vendor',
       address: vendor.vendorAddress?.value || null,
@@ -85,27 +102,39 @@ function normalizeAnalyticsData(llm: any) {
     tax: toNumber(summary.totalTax?.value),
     total: toNumber(summary.invoiceTotal?.value),
     lineItems: Array.isArray(lineItems)
-      ? lineItems.map((li: any) => ({
-          description: li.description?.value || 'Item',
-          quantity: toNumber(li.quantity?.value, 1),
-          unitPrice: toNumber(li.unitPrice?.value),
-          amount: toNumber(li.totalPrice?.value),
-          category: li.Sachkonto?.value?.toString() || null,
-        }))
-      : [],
-    payments: payment.discountedTotal
-      ? [
-          {
-            amount: toNumber(payment.discountedTotal),
-            date: payment.dueDate?.value || new Date(),
-            method: 'bank_transfer',
-          },
-        ]
+      ? lineItems.map((li: any) => {
+          // --- START OF MAPPING LOGIC ---
+          const sachkontoId = li.Sachkonto?.value?.toString();
+          const description = li.description?.value || 'Item';
+          let categoryName: string | null = null;
+
+          if (sachkontoId) {
+            // Check if the ID exists in our map
+            // If not, it will be named "Unknown (GL: 1234)"
+            categoryName = SACHKONTO_TO_DEPARTMENT_MAP[sachkontoId] || `Unknown (GL: ${sachkontoId})`;
+          } else {
+            // Fallback for items with no G/L account (like in 'invoiceaaa.pdf')
+            if (description.includes('Basic Fee')) categoryName = 'Base Fees';
+            else if (description.includes('Transaction Fee')) categoryName = 'Transaction Fees';
+            else categoryName = 'Uncategorized';
+          }
+          // --- END OF MAPPING LOGIC ---
+
+          return {
+            description: description,
+            quantity: toNumber(li.quantity?.value, 1),
+            unitPrice: toNumber(li.unitPrice?.value),
+            amount: toNumber(li.totalPrice?.value),
+            category: categoryName, // <-- Use the new mapped name
+          };
+        })
       : [],
   };
 }
 
-// 🧾 Create Vendor → Customer → Invoice → LineItems → Payments
+
+// 4. PROCESSOR FUNCTION (Modified to set dynamic status)
+
 async function processInvoiceData(item: any) {
   // Vendor
   let vendor = await prisma.vendor.findFirst({ where: { name: item.vendor.name } });
@@ -118,6 +147,21 @@ async function processInvoiceData(item: any) {
     if (!customer) customer = await prisma.customer.create({ data: item.customer });
   }
 
+  // Determine realistic invoice status
+  const today = new Date();
+  today.setHours(0, 0, 0, 0); // Set to start of day for comparison
+  let invoiceStatus: InvoiceStatus;
+  const total = toNumber(item.total);
+  const dueDate = item.dueDate ? new Date(item.dueDate) : null;
+
+  if (total <= 0) {
+    invoiceStatus = InvoiceStatus.PAID; // Mark credit notes as PAID
+  } else if (dueDate && dueDate < today) {
+    invoiceStatus = InvoiceStatus.OVERDUE; // Due date is in the past
+  } else {
+    invoiceStatus = InvoiceStatus.PENDING; // Due date is in the future or null
+  }
+
   // Invoice
   const invoice = await prisma.invoice.create({
     data: {
@@ -125,48 +169,42 @@ async function processInvoiceData(item: any) {
       vendorId: vendor.id,
       customerId: customer?.id || null,
       issueDate: new Date(item.issueDate),
-      dueDate: item.dueDate ? new Date(item.dueDate) : null,
-      status: InvoiceStatus.PAID,
+      dueDate: dueDate,
+      status: invoiceStatus, // Use dynamic status
       subtotal: toNumber(item.subtotal),
       taxAmount: toNumber(item.tax),
-      totalAmount: toNumber(item.total),
+      totalAmount: total,
       currency: 'EUR',
       description: 'Imported from analytics data',
+      category: null,
     },
   });
 
   // Line Items
   for (const li of item.lineItems) {
+    const amount = toNumber(li.amount);
+    // Skip line items with 0 or negative (credit) amounts
+    if (amount <= 0) continue; 
+
     await prisma.lineItem.create({
       data: {
         invoiceId: invoice.id,
         description: li.description,
         quantity: toNumber(li.quantity, 1),
         unitPrice: toNumber(li.unitPrice),
-        amount: toNumber(li.amount),
-        category: li.category,
+        amount: amount,
+        category: li.category, // This now holds the Department Name
       },
     });
   }
 
-  // Payments (safe defaults)
-  for (const p of item.payments) {
-    const amount = toNumber(p.amount);
-    if (!amount || amount === 0) continue; // skip invalid
-    await prisma.payment.create({
-      data: {
-        invoiceId: invoice.id,
-        amount,
-        paymentDate: p.date ? new Date(p.date) : new Date(),
-        paymentMethod: mapPaymentMethod(p.method),
-      },
-    });
-  }
-
-  console.log(`✅ Inserted invoice ${item.invoiceNumber} (${item.vendor.name})`);
+  // We are NOT creating Payment records, so invoices remain unpaid.
+  console.log(`✅ Inserted invoice ${item.invoiceNumber} (Status: ${invoiceStatus})`);
 }
 
-// Utility helpers
+
+// 5. HELPER FUNCTIONS (No changes needed)
+
 function mapPaymentMethod(method: string | undefined): PaymentMethod {
   if (!method) return PaymentMethod.BANK_TRANSFER;
   const map: Record<string, PaymentMethod> = {
@@ -184,6 +222,9 @@ function toNumber(val: any, fallback = 0): number {
   const num = parseFloat(val);
   return isNaN(num) ? fallback : num;
 }
+
+
+// 6. RUNNER (No changes needed)
 
 main()
   .catch((e) => {

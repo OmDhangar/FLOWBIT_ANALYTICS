@@ -16,6 +16,7 @@ import trendsRouter from './routes/trends.js';
 import vendorsRouter from './routes/vendors.js';
 import categoryRouter from './routes/category.js';
 import cashOutflowRouter from './routes/cashOutflow.js';
+import categoryOutflowRouter from './routes/categoryOutflow.js';
 import chatRouter from './routes/chat.js';
 
 // Load environment variables
@@ -70,6 +71,7 @@ app.use('/api/invoice-trends', trendsRouter);
 app.use('/api/vendors', vendorsRouter);
 app.use('/api/category-spend', categoryRouter);
 app.use('/api/cash-outflow', cashOutflowRouter);
+app.use('/api/category-outflow', categoryOutflowRouter);
 app.use('/api/chat-with-data', chatRouter);
 
 // Welcome route
@@ -85,6 +87,7 @@ app.get('/', (req, res) => {
       vendors: '/api/vendors/top10',
       categories: '/api/category-spend',
       cashOutflow: '/api/cash-outflow',
+      categoryOutflow: '/api/category-outflow',
       chat: '/api/chat-with-data',
     },
   });
