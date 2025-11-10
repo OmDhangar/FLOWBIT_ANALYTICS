@@ -43,7 +43,9 @@ export const errorHandler = (
 
   // Default error
   logger.error(`500 - ${err.message} - ${req.originalUrl} - ${req.method} - ${req.ip}`);
-  logger.error(err.stack);
+  
+  // FIXED LINE: Use '??' to provide a fallback if err.stack is undefined
+  logger.error(err.stack ?? 'No stack trace available');
 
   return res.status(500).json({
     status: 'error',
